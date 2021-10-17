@@ -2,9 +2,10 @@ import discord
 import json
 import urllib3
 import random
-from discord.ext import commands, tasks
 import os
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
+from yandex import YandexImage
 
 load_dotenv()
 channel_id = int(os.getenv('CHANNEL'))
@@ -18,10 +19,11 @@ accept = 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/we
 redditModeList = ['hot', 'new', 'top', 'rising', 'random', 'controversial', 'best']
 channel = client.get_channel(channel_id)
 
-async def reddit(board):
+async def reddit(board, msg=''):
     response = http.request('GET', 'https://www.reddit.com/r/' + board + '/random.api', headers={'User-agent':useragent} )
     data = json.loads(response.data)
     channel = client.get_channel(channel_id)
+
     try:
         gallery = ''
         for x in data[0]['data']['children'][0]['data']['gallery_data']['items']:
@@ -31,13 +33,12 @@ async def reddit(board):
     except:
         pass
     try:
-        video = data[0]['data']['children'][0]['data']['secure_media']['reddit_video']['fallback_url']
-        await channel.send(data[0]['data']['children'][0]['data']['title'] + ' ' + video)
+        await channel.send(data[0]['data']['children'][0]['data']['title'] + ' ' + data[0]['data']['children'][0]['data']['secure_media']['reddit_video']['fallback_url'])
         return
     except:
         pass
     try:
-        await channel.send(data[0]['data']['children'][0]['data']['title'] + ' ' + data[0]['data']['children'][0]['data']['url'])
+        await channel.send(msg + data[0]['data']['children'][0]['data']['title'] + ' ' + data[0]['data']['children'][0]['data']['url'])
     except:
         await channel.send('Not found')
 
@@ -75,7 +76,7 @@ async def on_ready():
 
 @tasks.loop(minutes= 10)
 async def nsfw():
-    await reddit('lolcats')
+    await reddit('lolcats','Coucou ')
 
 @client.event
 async def on_message(message):
@@ -96,12 +97,18 @@ async def on_message(message):
 
         #4chan boards
         if board in quatrechan_boards:
-            quatrechamps(board)
+            await quatrechamps(board)
             return
 
         #Reddit subreddits
         else:
-            reddit(board)
+            await reddit(board)
             return
+
+    if message.content.lower().startswith('image'):
+        parser = YandexImage()
+        yandexsearch = str(message.content).split(' ')
+        for item in parser.search(yandexsearch[1]):
+            print(item.url)
 
 client.run(os.getenv('TOKEN'))
